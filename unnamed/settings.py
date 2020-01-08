@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Additions
+    'corsheaders',  # for rest
+    'rest_framework',  # for rest
     'users',
     'post',
 ]
@@ -50,6 +52,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Additions
+    'corsheaders.middleware.CorsMiddleware',  # for rest
 ]
 
 ROOT_URLCONF = 'unnamed.urls'
@@ -123,4 +127,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 
+# ADDITIONS
+
+# New user
 AUTH_USER_MODEL = "users.BaseUser" 
+
+# Whitelist frontend for rest api
+CORS_ORIGIN_WHITELIST = ('http://localhost:3000',)
