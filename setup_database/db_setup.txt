@@ -1,6 +1,4 @@
-DROP USER 'testuser'@'localhost';
-DROP DATABASE userinfo;
-CREATE DATABASE userinfo;
-CREATE USER 'testuser'@'localhost' IDENTIFIED BY 'password';
-GRANT SELECT, CREATE, INSERT, UPDATE ON userinfo.* TO 'testuser'@'localhost';
+CREATE DATABASE IF NOT EXISTS maindb;
+CREATE USER IF NOT EXISTS 'testuser'@'localhost' IDENTIFIED BY 'password';
+GRANT SELECT, CREATE, INSERT, UPDATE ON maindb.* TO 'testuser'@'localhost';
 FLUSH PRIVILEGES;
