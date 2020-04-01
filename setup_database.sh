@@ -1,5 +1,5 @@
 #!/bin/sh
 
-exec mysql < setup/db_setup.txt &
+exec mysql < setup_database/db_setup.txt &
 sleep 1
-exec mysql -u testuser -p < setup/userinfo_setup.txt
+exec mysql -u testuser -p < setup_database/userinfo_setup.txt
