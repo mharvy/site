@@ -19,8 +19,8 @@ post_app = Blueprint('post_app', __name__)
 def create_post():
     # Get user inputs
     userid = request.form.get('userid')
-    title = request.form.get('title')
-    body = request.form.get('body').replace("\"","''")  # This is very patchy
+    title = request.form.get('title').replace("'","\\'")
+    body = request.form.get('body').replace("'","\\'")  # This is very patchy
 
     # Get automatic inputs (ip, date, time, location)
     ip = request.remote_addr
@@ -32,7 +32,7 @@ def create_post():
 
     # Commit post to database
     cur.execute("""INSERT INTO posts (userid, title, post_date, post_time, clientip, body, deleted, edited) 
-                   VALUES ('%s', '%s', '%s', '%s', '%s', "%s", false, false);""" % (userid, title, cur_date, cur_time, ip, body))
+                   VALUES ('%s', '%s', '%s', '%s', '%s', '%s', false, false);""" % (userid, title, cur_date, cur_time, ip, body))
     mysql.get_db().commit()
 
     # Craft response
@@ -77,7 +77,7 @@ def delete_post():
 def edit_post():
     # Get user inputs
     postid = request.form.get('postid')
-    body = request.form.get('body').replace("\"","''")  # This is very patchy
+    body = request.form.get('body').replace("'","\\'")  # This is very patchy
 
     # Cursor
     cur = mysql.get_db().cursor()
@@ -96,7 +96,7 @@ def edit_post():
 
 
 # This is for testing the api. Realistically, you should use Postman
-@post_app.route('/test-post', methods=['GET'])
+@post_app.route('/post/test', methods=['GET'])
 def form():
 
     return '''

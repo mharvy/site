@@ -15,7 +15,7 @@ auth_app = Blueprint('auth_app', __name__)
 # The frontend is responsible for creating salt.
 # TODO: This should require email verification.
 #
-@auth_app.route('/create-user', methods=['POST'])
+@auth_app.route('/auth/create-user', methods=['POST'])
 def create_user():
     # Get user inputs
     email = request.form.get('email')
@@ -51,7 +51,7 @@ def create_user():
 # but before the validation.
 # If this fails, we will return a "user doesn't exist error"
 #
-@auth_app.route('/get-salt', methods=['POST'])
+@auth_app.route('/auth/salt', methods=['POST'])
 def get_salt():
     # Get username
     username = request.form.get('username')
@@ -78,7 +78,7 @@ def get_salt():
 # login. This assumes the salt has been gotten by frontend
 # already.
 #
-@auth_app.route('/validate-user', methods=['POST'])
+@auth_app.route('/auth/validate-user', methods=['POST'])
 def validate_user():
     # Get user inputs
     username = request.form.get('username')
@@ -103,13 +103,13 @@ def validate_user():
 
 
 # This is for testing the api. Realistically, you should use Postman
-@auth_app.route('/test-auth', methods=['GET'])
+@auth_app.route('/auth/test', methods=['GET'])
 def form():
 
     return '''
             <h2>Test create user</h2>
             <p>This is to create a new user</p>
-            <form method="POST" action="/create-user">
+            <form method="POST" action="/auth/create-user">
                 email: <input type="text" name="email"><br>
                 username: <input type="text" name="username"><br>
                 passhash: <input type="text" name="passhash"><br>
@@ -119,14 +119,14 @@ def form():
 
             <h2>Test get salt</h2>
             <p>This will be used after user presses login, but before validation</p>
-            <form method="POST" action="/get-salt">
+            <form method="POST" action="/auth/salt">
                 username: <input type="text" name="username"><br>
                 <input type="submit" value="Submit"><br>
             </form><br>
 
             <h2>Test validate user</h2>
             <p>This will be called after the frontend has the salt. The salt and password</p>
-            <form method="POST" action="/validate-user">
+            <form method="POST" action="/auth/validate-user">
                 username/email: <input type="text" name="username"><br>
                 passhash: <input type="text" name="passhash"><br>
                 <input type="submit" value="Submit"><br>
