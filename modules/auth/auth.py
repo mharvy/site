@@ -1,9 +1,7 @@
-# app.py
-# This will likely be converted into just the login portion backend
+# auth.py
 
 from flask import Blueprint
 from flask import Flask, request, render_template, jsonify
-from random import choice
 from string import ascii_letters, digits
 from extensions import mysql
 
@@ -11,7 +9,7 @@ from extensions import mysql
 auth_app = Blueprint('auth_app', __name__)
 
 
-# create_user:
+# create_user: (api)
 # 
 # Frontend "create user" connects directly to this.
 # The frontend is responsible for creating salt.
@@ -26,6 +24,7 @@ def create_user():
     salt = request.form.get('salt')
 
     # TODO: Get automatic inputs (location, device, etc) needs interaction from frontends
+    ip = request.remote_addr
 
     # Cursor
     cur = mysql.get_db().cursor()
@@ -46,7 +45,7 @@ def create_user():
     return "<h1>Welcome, %s </h1>" % username  # This will return a success, as well as an authentication token
 
 
-# get_salt
+# get_salt: (api)
 #
 # This is recieved after login button on frontend,
 # but before the validation.
@@ -73,7 +72,7 @@ def get_salt():
     return response
 
 
-# validate_user
+# validate_user: (api)
 #
 # This is the actual user validation funtion during
 # login. This assumes the salt has been gotten by frontend
@@ -104,7 +103,7 @@ def validate_user():
 
 
 # This is for testing the api. Realistically, you should use Postman
-@auth_app.route('/test-requests', methods=['GET', 'POST'])
+@auth_app.route('/test-auth', methods=['GET'])
 def form():
 
     return '''
