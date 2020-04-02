@@ -31,8 +31,8 @@ def create_post():
     cur = mysql.get_db().cursor()
 
     # Commit post to database
-    cur.execute("""INSERT INTO posts (userid, title, post_date, post_time, clientip, body, deleted, edited) VALUES 
-                                    ('%s', '%s', '%s', '%s', '%s', "%s", false, false);""" % (userid, title, cur_date, cur_time, ip, body))
+    cur.execute("""INSERT INTO posts (userid, title, post_date, post_time, clientip, body, deleted, edited) 
+                   VALUES ('%s', '%s', '%s', '%s', '%s', "%s", false, false);""" % (userid, title, cur_date, cur_time, ip, body))
     mysql.get_db().commit()
 
     # Craft response

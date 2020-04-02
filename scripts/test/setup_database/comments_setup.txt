@@ -1,0 +1,12 @@
+USE maindb;
+CREATE TABLE IF NOT EXISTS comments (
+    commentid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    postid INT UNSIGNED NOT NULL,
+    userid INT UNSIGNED NOT NULL,
+    parent_comment INT UNSIGNED,
+    post_date DATE NOT NULL,
+    post_time TIME NOT NULL,
+    body TEXT NOT NULL,
+    deleted BOOLEAN NOT NULL,
+    edited BOOLEAN NOT NULL
+);
