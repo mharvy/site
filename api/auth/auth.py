@@ -1,134 +1,144 @@
 # auth.py
 
 from flask import Blueprint
-from flask import Flask, request, render_template, jsonify
-from string import ascii_letters, digits
-from extensions import mysql
+from flask import Flask, request, render_template, jsonify, make_response, g
+from datetime import datetime
+import bcrypt
+from models import User
+from app import db, auth
 
 
 auth_app = Blueprint('auth_app', __name__)
 
 
-# create_user: (api)
-# 
-# Frontend "create user" connects directly to this.
-# The frontend is responsible for creating salt.
-# TODO: This should require email verification.
-#
-@auth_app.route('/auth/create-user', methods=['POST'])
-def create_user():
+@auth_app.route('/api/auth/signup', methods=['POST'])
+def signup():
     # Get user inputs
     email = request.form.get('email')
     username = request.form.get('username')
-    passhash = request.form.get('passhash')  # Bcrypt
-    salt = request.form.get('salt')
+    password = request.form.get('password')
+    if None in [email, username, password]:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Bad request.'}))
+        return response
 
     # TODO: Get automatic inputs (location, device, etc) needs interaction from frontends
     ip = request.remote_addr
+    salt = bcrypt.gensalt()
 
-    # Cursor
-    cur = mysql.get_db().cursor()
+    # Check if username or email are already used
+    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Username or email already used.'}))
+        return response
 
     # TODO: Make sure email is a valid email
 
-    # Validate inputs, just check they don't already exist. Password will be checked by frontends
-    cur.execute("SELECT username FROM users WHERE username = '%s' OR email = '%s';" % (username, email))
-    if cur.rowcount >= 1:
-        return "Username or email already exists!"  # This will eventually just return some structure which says this. 
+    # Verify email
 
-    # Add user to database
-    cur.execute("INSERT INTO users (username, email, passhash, salt, verified) VALUES ('%s', '%s', '%s', '%s', false);" % (username, email, passhash, salt))
-    mysql.get_db().commit()
+    # Add the user to the database
+    try:
+        # Generate hash
+        passhash = str(bcrypt.hashpw(password.encode(encoding='UTF-8'), salt))[2:-1]
 
-    # Craft response
-    response = jsonify({'token': 'dummy-token'})
-    return "<h1>Welcome, %s </h1>" % username  # This will return a success, as well as an authentication token
+        # Add user to database
+        new_user = User(username=username, 
+                        email=email, 
+                        passhash=passhash, 
+                        salt=salt, 
+                        date_made=datetime.now().strftime('%Y-%m-%d'),
+                        time_made=datetime.now().strftime('%H:%M:%S'),
+                        verified=False)
+        db.session.add(new_user)
+        db.session.commit()
+    except e:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Something went wrong.'}))
 
-
-# get_salt: (api)
-#
-# This is recieved after login button on frontend,
-# but before the validation.
-# If this fails, we will return a "user doesn't exist error"
-#
-@auth_app.route('/auth/salt', methods=['POST'])
-def get_salt():
-    # Get username
-    username = request.form.get('username')
-    email = request.form.get('username')
-
-    # Cursor
-    cur = mysql.get_db().cursor()
-
-    # Get salt
-    cur.execute("SELECT salt FROM users WHERE username = '%s' OR email = '%s';" % (username, email))
-    if cur.rowcount < 1:
-       return "No such user"
-    salt = cur.fetchall()[0]
-
-    # Craft response
-    response = jsonify({'salt': salt})
-    
+    # Generate token
+    token = new_user.generate_auth_token()
+    response = make_response(jsonify({'status': 'success', 
+                                      'message': 'Logged in.'}))
+    response.set_cookie('token', token)
     return response
 
 
-# validate_user: (api)
-#
-# This is the actual user validation funtion during
-# login. This assumes the salt has been gotten by frontend
-# already.
-#
-@auth_app.route('/auth/validate-user', methods=['POST'])
-def validate_user():
+@auth_app.route('/api/auth/signin', methods=['POST'])
+def signin():
     # Get user inputs
     username = request.form.get('username')
-    email = request.form.get('username')
-    passhash = request.form.get('passhash')
+    password = request.form.get('password')
+    if None in [username, password]:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Bad request.'}))
+        return response
 
-    # TODO: Get automatic inputs (location, device, etc)
+    # TODO: Get automatic inputs
+    ip = request.remote_addr
 
-    # Cursor
-    cur = mysql.get_db().cursor()
+    # Get user in question
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        user = User.query.filter_by(email=username).first()
+    if not user:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'User does not exist.'}))
+        return response
 
-    # Validate inputs, check username/email exists, check passhash matches
-    cur.execute("SELECT userid, username FROM users WHERE (username = '%s' OR email = '%s') AND passhash = '%s';" % (username, email, passhash))
-    if cur.rowcount < 1:
-        return "Bad username or password"
+    # Check password
+    passhash = str(bcrypt.hashpw(password.encode(encoding='UTF-8'), user.salt.encode(encoding='UTF-8')))[2:-1]
+    if passhash != user.passhash:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Wrong password.'}))
+        return response
 
-    # Create auth token
-    token = "testtoken"
+    # Generate token
+    token = user.generate_auth_token()
+    response = make_response(jsonify({'status': 'success', 
+                                      'message': 'Signed in.'}))
+    response.set_cookie('token', token)
+    return response
 
-    # Craft response
-    return token
+
+@auth_app.route('/api/auth/signout', methods=['POST'])
+@auth.login_required
+def signout():
+    # Generate token
+    token = g.user.generate_auth_token(expiration=0)
+    response = make_response(jsonify({'status': 'success', 
+                                      'message': 'Signed out.'}))
+    response.set_cookie('token', token)
+    return response
 
 
-# This is for testing the api. Realistically, you should use Postman
-@auth_app.route('/auth/test', methods=['GET'])
+# This is for testing the api
+@auth_app.route('/api/auth/test', methods=['GET'])
+@auth.login_optional
 def form():
 
+    user = g.user.username if g.user else "None"
+
     return '''
+            <h2>Signed in as %s<h2><br><br>
+            
             <h2>Test create user</h2>
-            <p>This is to create a new user</p>
-            <form method="POST" action="/auth/create-user">
+            <form method="POST" action="/api/auth/signup">
                 email: <input type="text" name="email"><br>
                 username: <input type="text" name="username"><br>
-                passhash: <input type="text" name="passhash"><br>
-                salt: <input type="text" name="salt"><br>
-                <input type="submit" value="Submit"><br>
+                password: <input type="text" name="password"><br>
+                <input type="submit" value="Create user"><br>
             </form><br>
 
-            <h2>Test get salt</h2>
-            <p>This will be used after user presses login, but before validation</p>
-            <form method="POST" action="/auth/salt">
-                username: <input type="text" name="username"><br>
-                <input type="submit" value="Submit"><br>
-            </form><br>
-
-            <h2>Test validate user</h2>
-            <p>This will be called after the frontend has the salt. The salt and password</p>
-            <form method="POST" action="/auth/validate-user">
+            <h2>Test sign in</h2>
+            <form method="POST" action="/api/auth/signin">
                 username/email: <input type="text" name="username"><br>
-                passhash: <input type="text" name="passhash"><br>
-                <input type="submit" value="Submit"><br>
+                password: <input type="text" name="password"><br>
+                <input type="submit" value="Sign in"><br>
             </form><br>
-            '''
+
+            <h2>Test sign out</h2>
+            <form method="POST" action="/api/auth/signout">
+                <input type="submit" value="Sign out"><br>
+            </form><br>
+
+            ''' % user
