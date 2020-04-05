@@ -15,8 +15,8 @@ submission_app = Blueprint('submission_app', __name__)
 @auth.login_required
 def create_submission():
     # Get user inputs
-    title = request.form.get('title').replace("'","\\'")
-    body = request.form.get('body').replace("'","\\'")
+    title = request.form.get('title')
+    body = request.form.get('body')
     if None in [title, body]:
         response = make_response(jsonify({'status': 'failed', 
                                           'message': 'Bad request.'}))

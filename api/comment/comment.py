@@ -17,7 +17,7 @@ def create_comment():
     # Get user inputs
     submissionid = request.form.get('submissionid')
     parent_comment = request.form.get('parent_comment')
-    body = request.form.get('body').replace("'","\\'")  # This is very patchy
+    body = request.form.get('body')
     if None in [submissionid, parent_comment, body]:
         response = make_response(jsonify({'status': 'failed', 
                                           'message': 'Bad request.'}))
@@ -29,8 +29,8 @@ def create_comment():
     cur_date = datetime.now().strftime("%Y-%m-%d")
 
     # Add new submission to the database
-    try:
-        new_comment = Comment(submissionid=submissionid,
+    #try:
+    new_comment = Comment(submissionid=submissionid,
                               userid=g.user.id,
                               parent_comment=parent_comment,
                               date_made=cur_date,
@@ -39,12 +39,12 @@ def create_comment():
                               body=body,
                               deleted=False,
                               edited=False)
-        db.session.add(new_comment)
-        db.session.commit()
-    except:
-        response = make_response(jsonify({'status': 'failed', 
-                                          'message': 'Something went wrong.'}))
-        return response
+    db.session.add(new_comment)
+    db.session.commit()
+    #except:
+    #    response = make_response(jsonify({'status': 'failed', 
+    #                                      'message': 'Something went wrong.'}))
+    #    return response
 
     # Craft and send response
     response = make_response(jsonify({'status': 'success', 
