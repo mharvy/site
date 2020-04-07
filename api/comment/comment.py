@@ -29,22 +29,22 @@ def create_comment():
     cur_date = datetime.now().strftime("%Y-%m-%d")
 
     # Add new submission to the database
-    #try:
-    new_comment = Comment(submissionid=submissionid,
-                              userid=g.user.id,
-                              parent_comment=parent_comment,
-                              date_made=cur_date,
-                              time_made=cur_time,
-                              clientip=ip,
-                              body=body,
-                              deleted=False,
-                              edited=False)
-    db.session.add(new_comment)
-    db.session.commit()
-    #except:
-    #    response = make_response(jsonify({'status': 'failed', 
-    #                                      'message': 'Something went wrong.'}))
-    #    return response
+    try:
+        new_comment = Comment(submissionid=submissionid,
+                                  userid=g.user.id,
+                                  parent_comment=parent_comment,
+                                  date_made=cur_date,
+                                  time_made=cur_time,
+                                  clientip=ip,
+                                  body=body,
+                                  deleted=False,
+                                  edited=False)
+        db.session.add(new_comment)
+        db.session.commit()
+    except:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Something went wrong.'}))
+        return response
 
     # Craft and send response
     response = make_response(jsonify({'status': 'success', 

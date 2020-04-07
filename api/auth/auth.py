@@ -48,12 +48,16 @@ def signup():
                         salt=salt, 
                         date_made=datetime.now().strftime('%Y-%m-%d'),
                         time_made=datetime.now().strftime('%H:%M:%S'),
-                        verified=False)
+                        verified=False,
+                        deleted=False,
+                        liked="",
+                        disliked="")
         db.session.add(new_user)
         db.session.commit()
-    except e:
+    except:
         response = make_response(jsonify({'status': 'failed', 
                                           'message': 'Something went wrong.'}))
+        return response
 
     # Generate token
     token = new_user.generate_auth_token()
@@ -108,6 +112,32 @@ def signout():
     response = make_response(jsonify({'status': 'success', 
                                       'message': 'Signed out.'}))
     response.set_cookie('token', token)
+    return response
+
+
+@auth_app.route('/api/auth/remove', methods=['POST'])
+@auth.login_required
+def remove_user():
+    # Mark user as deleted and remove information
+    try:
+        user = User.query.filter_by(id=g.user.id).first()
+        user.email = None
+        user.passhash = None
+        user.salt = None
+        user.date_made = None
+        user.time_made = None
+        user.verified = False
+        user.deleted = True
+        
+        db.session.commit()
+    except:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Something went wrong.'}))
+        return response
+
+    # Return success response
+    response = make_response(jsonify({'status': 'success', 
+                                      'message': 'User deleted.'}))
     return response
 
 

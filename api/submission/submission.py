@@ -36,7 +36,10 @@ def create_submission():
                                     title=title,
                                     body=body,
                                     deleted=False,
-                                    edited=False)
+                                    edited=False,
+                                    like=0,
+                                    dislike=0,
+                                    views=0)
         db.session.add(new_submission)
         db.session.commit()
     except:
@@ -108,6 +111,98 @@ def edit_submission():
     # Craft and send response
     response = make_response(jsonify({'status': 'success', 
                                       'message': 'Submission edited.'}))
+    return response
+
+
+@submission_app.route('/api/submission/like', methods=['POST'])
+@auth.login_required
+def like_submission():
+    liked_flag = False  # Flag for if submission already liked
+
+    # Get user inputs 
+    submissionid = request.form.get('id')
+    if None in [submissionid,]:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Bad request.'}))
+        return response
+
+    # Increment submission likes and add to user's liked submissions
+    try:
+        # First check if already liked
+        u = User.query.filter_by(id=g.user.id).first()
+        liked = [int(i) for i in u.liked.split(",")]
+
+        s = Submission.query.filter_by(id=submissionid).first()
+        if s.id in liked:
+            liked_flag = True
+
+        # Now actually alter database
+        if not liked_flag:
+            s.likes = Submission.likes + 1  # No race condition
+            u.liked = User.liked + str(s.id) + ","
+        else:
+            s.likes = Submission.likes + 1
+            u.liked = ','.join(str(i) for i in liked.remove(s.id))
+
+        db.session.commit()
+    except:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Something went wrong.'}))
+        return response
+
+    # Craft and send response
+    if not liked_flag:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Submission liked.'}))
+    else:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Submission unliked.'}))
+    return response
+
+
+@submission_app.route('/api/submission/dislike', methods=['POST'])
+@auth.login_required
+def dislike_submission():
+    disliked_flag = False  # Flag for if submission already disliked
+
+    # Get user inputs 
+    submissionid = request.form.get('id')
+    if None in [submissionid,]:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Bad request.'}))
+        return response
+
+    # Increment submission likes and add to user's disliked submissions
+    try:
+        # First check if already disliked
+        u = User.query.filter_by(id=g.user.id).first()
+        disliked = [int(i) for i in u.disliked.split(",")]
+
+        s = Submission.query.filter_by(id=submissionid).first()
+        if s.id in disliked:
+            disliked_flag = True
+
+        # Now actually alter database
+        if not disliked_flag:
+            s.likes = Submission.likes + 1  # No race condition
+            u.disliked = User.disliked + str(s.id) + ","
+        else:
+            s.likes = Submission.likes + 1
+            u.disliked = ','.join(str(i) for i in disliked.remove(s.id))
+
+        db.session.commit()
+    except:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Something went wrong.'}))
+        return response
+
+    # Craft and send response
+    if not disliked_flag:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Submission disliked.'}))
+    else:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Submission undisliked.'}))
     return response
 
 

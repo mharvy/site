@@ -2,10 +2,13 @@ USE maindb;
 CREATE TABLE IF NOT EXISTS users (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
     username VARCHAR(30) NOT NULL, 
-    email VARCHAR(100) NOT NULL, 
-    passhash VARCHAR(60) NOT NULL, 
-    salt VARCHAR(32) NOT NULL, 
-    date_made DATE NOT NULL,
-    time_made TIME NOT NULL,
-    verified BOOLEAN
+    email VARCHAR(100), 
+    passhash VARCHAR(60), 
+    salt VARCHAR(32), 
+    date_made DATE,
+    time_made TIME,
+    verified BOOLEAN NOT NULL,
+    deleted BOOLEAN NOT NULL,
+    liked LONGTEXT NOT NULL,
+    disliked LONGTEXT NOT NULL
 );
