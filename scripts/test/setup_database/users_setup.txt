@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     time_made TIME,
     verified BOOLEAN NOT NULL,
     deleted BOOLEAN NOT NULL,
-    liked LONGTEXT NOT NULL,
-    disliked LONGTEXT NOT NULL
+    s_liked LONGTEXT NOT NULL,
+    s_disliked LONGTEXT NOT NULL,
+    c_liked LONGTEXT NOT NULL,
+    c_disliked LONGTEXT NOT NULL
 );

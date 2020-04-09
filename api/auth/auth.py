@@ -50,8 +50,10 @@ def signup():
                         time_made=datetime.now().strftime('%H:%M:%S'),
                         verified=False,
                         deleted=False,
-                        liked="",
-                        disliked="")
+                        s_liked="",
+                        s_disliked="",
+                        c_liked="",
+                        c_disliked="")
         db.session.add(new_user)
         db.session.commit()
     except:

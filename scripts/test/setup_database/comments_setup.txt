@@ -9,5 +9,7 @@ CREATE TABLE IF NOT EXISTS comments (
     clientip VARCHAR(15) NOT NULL,
     body TEXT NOT NULL,
     deleted BOOLEAN NOT NULL,
-    edited BOOLEAN NOT NULL
+    edited BOOLEAN NOT NULL,
+    likes INT UNSIGNED NOT NULL,
+    dislikes INT UNSIGNED NOT NULL
 );

@@ -18,8 +18,10 @@ class User(db.Model):
     time_made = db.Column(db.Time())
     verified = db.Column(db.Boolean(), nullable=False)
     deleted = db.Column(db.Boolean(), nullable=False)
-    liked = db.Column(LONGTEXT, nullable=False)
-    disliked = db.Column(LONGTEXT, nullable=False)
+    s_liked = db.Column(LONGTEXT, nullable=False)
+    s_disliked = db.Column(LONGTEXT, nullable=False)
+    c_liked = db.Column(LONGTEXT, nullable=False)
+    c_disliked = db.Column(LONGTEXT, nullable=False)
 
     @staticmethod
     def verify_auth_token(token):
@@ -72,3 +74,5 @@ class Comment(db.Model):
     body = db.Column(TEXT, nullable=False)
     deleted = db.Column(db.Boolean(), nullable=False)
     edited = db.Column(db.Boolean(), nullable=False)
+    likes = db.Column(INTEGER(unsigned=True), nullable=False)
+    dislikes = db.Column(INTEGER(unsigned=True), nullable=False)

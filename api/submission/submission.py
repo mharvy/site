@@ -130,20 +130,20 @@ def like_submission():
     try:
         # First check if already liked
         u = User.query.filter_by(id=g.user.id).first()
-        liked = [int(i) for i in u.liked.split(',')[:-1]]
+        s_liked = [int(i) for i in u.s_liked.split(',')[:-1]]
 
         s = Submission.query.filter_by(id=submissionid).first()
-        if s.id in liked:
+        if s.id in s_liked:
             liked_flag = True
 
         # Now actually alter database
         if not liked_flag:
             s.likes = Submission.likes + 1  # No race condition
-            u.liked = User.liked + str(s.id) + ','
+            u.s_liked = User.s_liked + str(s.id) + ','
         else:
             s.likes = Submission.likes - 1
-            liked.remove(s.id)
-            u.liked = ','.join(str(i) for i in liked)[1:]
+            s_liked.remove(s.id)
+            u.s_liked = ','.join(str(i) for i in s_liked)[1:]
 
         db.session.commit()
     except:
@@ -177,20 +177,20 @@ def dislike_submission():
     try:
         # First check if already disliked
         u = User.query.filter_by(id=g.user.id).first()
-        disliked = [int(i) for i in u.disliked.split(',')[:-1]]
+        s_disliked = [int(i) for i in u.s_disliked.split(',')[:-1]]
 
         s = Submission.query.filter_by(id=submissionid).first()
-        if s.id in disliked:
+        if s.id in s_disliked:
             disliked_flag = True
 
         # Now actually alter database
         if not disliked_flag:
             s.dislikes = Submission.dislikes + 1  # No race condition
-            u.disliked = User.disliked + str(s.id) + ','
+            u.s_disliked = User.s_disliked + str(s.id) + ','
         else:
             s.dislikes = Submission.dislikes - 1
-            disliked.remove(s.id)
-            u.disliked = ','.join(str(i) for i in disliked)[1:]
+            s_disliked.remove(s.id)
+            u.s_disliked = ','.join(str(i) for i in s_disliked)[1:]
 
         db.session.commit()
     except:

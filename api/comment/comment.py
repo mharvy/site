@@ -4,7 +4,7 @@ from flask import Blueprint
 from flask import Flask, request, render_template, jsonify, make_response, g
 from string import ascii_letters, digits
 from datetime import datetime
-from models import Comment
+from models import Comment, User
 from app import db, auth
 
 
@@ -31,14 +31,16 @@ def create_comment():
     # Add new submission to the database
     try:
         new_comment = Comment(submissionid=submissionid,
-                                  userid=g.user.id,
-                                  parent_comment=parent_comment,
-                                  date_made=cur_date,
-                                  time_made=cur_time,
-                                  clientip=ip,
-                                  body=body,
-                                  deleted=False,
-                                  edited=False)
+                              userid=g.user.id,
+                              parent_comment=parent_comment,
+                              date_made=cur_date,
+                              time_made=cur_time,
+                              clientip=ip,
+                              body=body,
+                              deleted=False,
+                              edited=False,
+                              likes=0,
+                              dislikes=0)
         db.session.add(new_comment)
         db.session.commit()
     except:
@@ -113,6 +115,100 @@ def edit_comment():
     return response
 
 
+@comment_app.route('/api/comment/like', methods=['POST'])
+@auth.login_required
+def like_comment():
+    liked_flag = False  # Flag for if comment already liked
+
+    # Get user inputs 
+    commentid = request.form.get('id')
+    if None in [commentid,]:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Bad request.'}))
+        return response
+
+    # Increment comment likes and add to user's liked comments
+    try:
+        # First check if already liked
+        u = User.query.filter_by(id=g.user.id).first()
+        c_liked = [int(i) for i in u.c_liked.split(',')[:-1]]
+
+        c = Comment.query.filter_by(id=commentid).first()
+        if c.id in c_liked:
+            liked_flag = True
+
+        # Now actually alter database
+        if not liked_flag:
+            c.likes = Comment.likes + 1  # No race condition
+            u.c_liked = User.c_liked + str(c.id) + ','
+        else:
+            c.likes = Comment.likes - 1
+            c_liked.remove(c.id)
+            u.c_liked = ','.join(str(i) for i in c_liked)[1:]
+
+        db.session.commit()
+    except:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Something went wrong.'}))
+        return response
+
+    # Craft and send response
+    if not liked_flag:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Comment liked.'}))
+    else:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Comment unliked.'}))
+    return response
+
+
+@comment_app.route('/api/comment/dislike', methods=['POST'])
+@auth.login_required
+def dislike_comment():
+    disliked_flag = False  # Flag for if comment already disliked
+
+    # Get user inputs 
+    commentid = request.form.get('id')
+    if None in [commentid,]:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Bad request.'}))
+        return response
+
+    # Increment comment likes and add to user's disliked comments
+    try:
+        # First check if already disliked
+        u = User.query.filter_by(id=g.user.id).first()
+        c_disliked = [int(i) for i in u.c_disliked.split(',')[:-1]]
+
+        c = Comment.query.filter_by(id=commentid).first()
+        if c.id in c_disliked:
+            disliked_flag = True
+
+        # Now actually alter database
+        if not disliked_flag:
+            c.dislikes = Comment.dislikes + 1  # No race condition
+            u.c_disliked = User.c_disliked + str(c.id) + ','
+        else:
+            c.dislikes = Comment.dislikes - 1
+            c_disliked.remove(s.id)
+            u.c_disliked = ','.join(str(i) for i in c_disliked)[1:]
+
+        db.session.commit()
+    except:
+        response = make_response(jsonify({'status': 'failed', 
+                                          'message': 'Something went wrong.'}))
+        return response
+
+    # Craft and send response
+    if not disliked_flag:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Comment disliked.'}))
+    else:
+        response = make_response(jsonify({'status': 'success', 
+                                          'message': 'Comment undisliked.'}))
+    return response
+
+
 # This is for testing the api
 @comment_app.route('/api/comment/test', methods=['GET'])
 @auth.login_optional
@@ -126,18 +222,26 @@ def form():
         if comment:
             c_id = comment.id
             body = comment.body
+            likes = str(comment.likes)
+            dislikes = str(comment.dislikes)
         else:
             c_id = "None"
+            likes = "None"
+            dislikes = "None"
             body = "None"
     else:
-        user = "None"
         c_id = "None"
+        user = "None"
+        likes = "None"
+        dislikes = "None"
         body = "None"
 
     return '''
-            <h2>Signed in as %s<h2><br><br>
+            <h2>Signed in as %s</h2><br><br>
             <p>Here is your last comment:</p>
-            <h3>%s: %s</h3>
+            <p>ID: %s</p>
+            <p>LIKES/DISLIKES: %s/%s</p>
+            <p>BODY: %s</p>
 
             <h2>Test create comment</h2>
             <form method="POST" action="/api/comment/create">
@@ -159,4 +263,16 @@ def form():
                 new body: <input type="text" name="body"><br>
                 <input type="submit" value="Submit"><br>
             </form><br>
-            ''' % (user, c_id, body)
+
+            <h2>Test like comment</h2>
+            <form method="POST" action="/api/comment/like">
+                submission id: <input type="text" name="id"><br>
+                <input type="submit" value="Like comment"><br>
+            </form><br>
+
+            <h2>Test dislike comment</h2>
+            <form method="POST" action="/api/comment/dislike">
+                submission id: <input type="text" name="id"><br>
+                <input type="submit" value="Dislike comment"><br>
+            </form><br>
+            ''' % (user, c_id, likes, dislikes, body)
