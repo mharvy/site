@@ -4,7 +4,7 @@ from flask import Blueprint
 from flask import Flask, request, render_template, jsonify, make_response, g
 from string import ascii_letters, digits
 from datetime import datetime
-from models import Submission
+from models import Submission, User
 from app import db, auth
 
 
@@ -30,16 +30,16 @@ def create_submission():
     # Add new submission to the database
     try:
         new_submission = Submission(userid=g.user.id,
-                                    date_made=cur_date,
-                                    time_made=cur_time,
-                                    clientip=ip,
-                                    title=title,
-                                    body=body,
-                                    deleted=False,
-                                    edited=False,
-                                    like=0,
-                                    dislike=0,
-                                    views=0)
+                                        date_made=cur_date,
+                                        time_made=cur_time,
+                                        clientip=ip,
+                                        title=title,
+                                        body=body,
+                                        deleted=False,
+                                        edited=False,
+                                        likes=0,
+                                        dislikes=0,
+                                        views=0)
         db.session.add(new_submission)
         db.session.commit()
     except:
@@ -58,7 +58,7 @@ def create_submission():
 def remove_submission():
     # Get user inputs
     submissionid = request.form.get('id')
-    if None in [postid,]:
+    if None in [submissionid,]:
         response = make_response(jsonify({'status': 'failed', 
                                           'message': 'Bad request.'}))
         return response
@@ -130,7 +130,7 @@ def like_submission():
     try:
         # First check if already liked
         u = User.query.filter_by(id=g.user.id).first()
-        liked = [int(i) for i in u.liked.split(",")]
+        liked = [int(i) for i in u.liked.split(',')[:-1]]
 
         s = Submission.query.filter_by(id=submissionid).first()
         if s.id in liked:
@@ -139,10 +139,11 @@ def like_submission():
         # Now actually alter database
         if not liked_flag:
             s.likes = Submission.likes + 1  # No race condition
-            u.liked = User.liked + str(s.id) + ","
+            u.liked = User.liked + str(s.id) + ','
         else:
-            s.likes = Submission.likes + 1
-            u.liked = ','.join(str(i) for i in liked.remove(s.id))
+            s.likes = Submission.likes - 1
+            liked.remove(s.id)
+            u.liked = ','.join(str(i) for i in liked)[1:]
 
         db.session.commit()
     except:
@@ -176,7 +177,7 @@ def dislike_submission():
     try:
         # First check if already disliked
         u = User.query.filter_by(id=g.user.id).first()
-        disliked = [int(i) for i in u.disliked.split(",")]
+        disliked = [int(i) for i in u.disliked.split(',')[:-1]]
 
         s = Submission.query.filter_by(id=submissionid).first()
         if s.id in disliked:
@@ -184,11 +185,12 @@ def dislike_submission():
 
         # Now actually alter database
         if not disliked_flag:
-            s.likes = Submission.likes + 1  # No race condition
-            u.disliked = User.disliked + str(s.id) + ","
+            s.dislikes = Submission.dislikes + 1  # No race condition
+            u.disliked = User.disliked + str(s.id) + ','
         else:
-            s.likes = Submission.likes + 1
-            u.disliked = ','.join(str(i) for i in disliked.remove(s.id))
+            s.dislikes = Submission.dislikes - 1
+            disliked.remove(s.id)
+            u.disliked = ','.join(str(i) for i in disliked)[1:]
 
         db.session.commit()
     except:
@@ -220,21 +222,29 @@ def form():
             s_id = submission.id
             title = submission.title
             body = submission.body
+            likes = str(submission.likes)
+            dislikes = str(submission.dislikes)
         else:
             s_id = "None"
             title = "None"
             body = "None"
+            likes = "None"
+            dislikes = "None"
     else:
         s_id = "None"
         user = "None"
         title = "None"
+        likes = "None"
+        dislikes = "None"
         body = "None"
 
     return '''
-            <h2>Signed in as %s<h2><br><br>
+            <h2>Signed in as %s</h2><br><br>
             <p>Here is your last submission:</p>
-            <h3>%s: %s</h3>
-            <p>%s<p>
+            <p>ID: %s</p>
+            <p>TITLE: %s</p>
+            <p>LIKES/DISLIKES: %s/%s</p>
+            <p>BODY: %s<p>
 
             <h2>Test create submission</h2>
             <form method="POST" action="/api/submission/create">
@@ -255,4 +265,16 @@ def form():
                 new body: <input type="text" name="body"><br>
                 <input type="submit" value="Edit submission"><br>
             </form><br>
-            ''' % (user, s_id, title, body)
+
+            <h2>Test like submission</h2>
+            <form method="POST" action="/api/submission/like">
+                submission id: <input type="text" name="id"><br>
+                <input type="submit" value="Like submission"><br>
+            </form><br>
+
+            <h2>Test dislike submission</h2>
+            <form method="POST" action="/api/submission/dislike">
+                submission id: <input type="text" name="id"><br>
+                <input type="submit" value="Dislike submission"><br>
+            </form><br>
+            ''' % (user, s_id, title, likes, dislikes, body)
